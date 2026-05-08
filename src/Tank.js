@@ -61,7 +61,7 @@ export class Tank {
         this.scene.add(this.mesh);
     }
 
-    update() {
+    update(deltaTime) {
         // Rotation from mouse
         if (keys.isLocked) {
             this.mesh.rotation.y -= keys.movementX * 0.003;
@@ -94,6 +94,7 @@ export class Tank {
         this.mesh.position.y = 0;
 
         // Shooting
+        this.shootTimer += deltaTime;
         if (keys.shoot) {
             if (this.shootTimer > this.shootDelay) {
                 this.shoot();
@@ -120,7 +121,5 @@ export class Tank {
         const rot = new THREE.Euler(this.cameraPitch, this.mesh.rotation.y, 0, 'YXZ');
         const bullet = new Bullet(this.scene, spawnPos, rot);
         this.bullets.push(bullet);
-    }
-}     this.bullets.push(bullet);
     }
 }
