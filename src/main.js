@@ -4,6 +4,7 @@ import { Tank } from './Tank.js';
 import { Ufo } from './Ufo.js';
 import { CameraController } from './CameraController.js';
 import { ObjectPool } from './ObjectPool.js';
+import { ParticleSystem } from './ParticleSystem.js';
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -59,6 +60,7 @@ const tank = new Tank(scene, inputManager);
 const cameraController = new CameraController(camera, tank);
 const ufos = [];
 const ufoPool = new ObjectPool(() => new Ufo(scene));
+const particleSystem = new ParticleSystem(scene);
 
 let score = 0;
 const scoreElement = document.getElementById('score');
@@ -96,6 +98,7 @@ function checkCollisions() {
         }
 
         if (ufoHit) {
+            particleSystem.explode(ufo.mesh.position);
             ufo.destroy();
             ufoPool.release(ufo);
             ufos.splice(i, 1);
@@ -133,6 +136,8 @@ function animate(time) {
     }
 
     checkCollisions();
+    
+    particleSystem.update(deltaTime);
 
     cameraController.update(deltaTime);
 
