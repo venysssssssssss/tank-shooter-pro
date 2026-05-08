@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { Bullet } from './Bullet.js';
+import { ObjectPool } from './ObjectPool.js';
 
 export class Tank {
     constructor(scene, inputManager) {
         this.scene = scene;
         this.inputManager = inputManager;
         this.bullets = [];
+        this.bulletPool = new ObjectPool(() => new Bullet(this.scene));
         this.shootTimer = 0.25;
         this.shootDelay = 0.25; // s
 
@@ -107,6 +109,7 @@ export class Tank {
             const b = this.bullets[i];
             b.update(deltaTime);
             if (!b.active) {
+                this.bulletPool.release(b);
                 this.bullets.splice(i, 1);
             }
         }
@@ -122,9 +125,5 @@ export class Tank {
         const bullet = this.bulletPool.get();
         bullet.reset(spawnPos, rot);
         this.bullets.push(bullet);
-    }
-}s.push(bullet);
-    }
-}ullets.push(bullet);
     }
 }

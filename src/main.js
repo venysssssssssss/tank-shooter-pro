@@ -3,6 +3,7 @@ import { InputManager } from './InputManager.js';
 import { Tank } from './Tank.js';
 import { Ufo } from './Ufo.js';
 import { CameraController } from './CameraController.js';
+import { ObjectPool } from './ObjectPool.js';
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -57,6 +58,7 @@ const inputManager = new InputManager(renderer.domElement);
 const tank = new Tank(scene, inputManager);
 const cameraController = new CameraController(camera, tank);
 const ufos = [];
+const ufoPool = new ObjectPool(() => new Ufo(scene));
 
 let score = 0;
 const scoreElement = document.getElementById('score');
@@ -68,7 +70,9 @@ const ufoSpawnRate = 1500; // Faster spawn
 
 function spawnUfos(time) {
     if (time - lastUfoSpawn > ufoSpawnRate) {
-        ufos.push(new Ufo(scene));
+        const ufo = ufoPool.get();
+        ufo.reset();
+        ufos.push(ufo);
         lastUfoSpawn = time;
     }
 }
@@ -93,6 +97,7 @@ function checkCollisions() {
 
         if (ufoHit) {
             ufo.destroy();
+            ufoPool.release(ufo);
             ufos.splice(i, 1);
         }
     }
@@ -138,9 +143,6 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-animate(0);t);
 });
 
 animate(0);
