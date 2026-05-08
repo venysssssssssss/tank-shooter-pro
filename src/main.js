@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { InputManager } from './InputManager.js';
 import { Tank } from './Tank.js';
 import { Ufo } from './Ufo.js';
+import { CameraController } from './CameraController.js';
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -126,11 +127,18 @@ function animate(time) {
 
     checkCollisions();
 
-    // 3rd Person Camera Logic
-    // Place camera behind the tank
-    const cameraOffset = new THREE.Vector3(0, 5, 12); // Behind and slightly up
-    
-    // Apply the tank's rotation (Y) and pitch (X) to the offset so the camera swings around it
+    cameraController.update(deltaTime);
+
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate(0);gs around it
     cameraOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), tank.cameraPitch);
     cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), tank.mesh.rotation.y);
     
