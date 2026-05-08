@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { keys } from './input.js';
 import { Bullet } from './Bullet.js';
 
 export class Tank {
-    constructor(scene) {
+    constructor(scene, inputManager) {
         this.scene = scene;
+        this.inputManager = inputManager;
         this.bullets = [];
         this.shootTimer = 0.25;
         this.shootDelay = 0.25; // s
@@ -63,30 +63,30 @@ export class Tank {
 
     update(deltaTime) {
         // Rotation from mouse
-        if (keys.isLocked) {
-            this.mesh.rotation.y -= keys.movementX * 0.003;
-            this.cameraPitch -= keys.movementY * 0.003;
+        if (this.inputManager.keys.isLocked) {
+            this.mesh.rotation.y -= this.inputManager.keys.movementX * 0.003;
+            this.cameraPitch -= this.inputManager.keys.movementY * 0.003;
             
             // Clamp pitch (so we can't look too far up or down)
             this.cameraPitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 8, this.cameraPitch));
 
             // Reset mouse movement after applying
-            keys.movementX = 0;
-            keys.movementY = 0;
+            this.inputManager.keys.movementX = 0;
+            this.inputManager.keys.movementY = 0;
         } else {
             // Fallback keyboard rotation
-            if (keys.left) this.mesh.rotation.y += this.turnSpeed * deltaTime;
-            if (keys.right) this.mesh.rotation.y -= this.turnSpeed * deltaTime;
+            if (this.inputManager.keys.left) this.mesh.rotation.y += this.turnSpeed * deltaTime;
+            if (this.inputManager.keys.right) this.mesh.rotation.y -= this.turnSpeed * deltaTime;
         }
 
         // Apply pitch to barrel visually
         this.barrelPivot.rotation.x = this.cameraPitch;
 
         // Movement relative to current rotation
-        if (keys.forward) {
+        if (this.inputManager.keys.forward) {
             this.mesh.translateZ(-this.moveSpeed * deltaTime);
         }
-        if (keys.backward) {
+        if (this.inputManager.keys.backward) {
             this.mesh.translateZ(this.moveSpeed * deltaTime);
         }
         
@@ -95,7 +95,7 @@ export class Tank {
 
         // Shooting
         this.shootTimer += deltaTime;
-        if (keys.shoot) {
+        if (this.inputManager.keys.shoot) {
             if (this.shootTimer > this.shootDelay) {
                 this.shoot();
                 this.shootTimer = 0;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { initInput, keys } from './input.js';
+import { InputManager } from './InputManager.js';
 import { Tank } from './Tank.js';
 import { Ufo } from './Ufo.js';
 
@@ -52,8 +52,8 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // --- Game Objects ---
-initInput(renderer.domElement);
-const tank = new Tank(scene);
+const inputManager = new InputManager(renderer.domElement);
+const tank = new Tank(scene, inputManager);
 const ufos = [];
 
 let score = 0;
@@ -104,7 +104,7 @@ function animate(time) {
     requestAnimationFrame(animate);
     const deltaTime = clock.getDelta();
 
-    if (keys.isLocked) {
+    if (inputManager.keys.isLocked) {
         controlsHint.style.display = 'none';
     } else {
         controlsHint.style.display = 'block';
