@@ -55,6 +55,7 @@ scene.add(ground);
 // --- Game Objects ---
 const inputManager = new InputManager(renderer.domElement);
 const tank = new Tank(scene, inputManager);
+const cameraController = new CameraController(camera, tank);
 const ufos = [];
 
 let score = 0;
@@ -128,30 +129,6 @@ function animate(time) {
     checkCollisions();
 
     cameraController.update(deltaTime);
-
-    renderer.render(scene, camera);
-}
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-animate(0);gs around it
-    cameraOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), tank.cameraPitch);
-    cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), tank.mesh.rotation.y);
-    
-    // Smoothly follow tank position
-    const targetCameraPos = tank.mesh.position.clone().add(cameraOffset);
-    camera.position.lerp(targetCameraPos, 0.15); // Smooth interpolation
-
-    // Look slightly above the tank (where the turret is aiming)
-    const lookTarget = new THREE.Vector3(0, 0, -50); 
-    lookTarget.applyEuler(new THREE.Euler(tank.cameraPitch, tank.mesh.rotation.y, 0, 'YXZ'));
-    lookTarget.add(tank.mesh.position);
-    
-    camera.lookAt(lookTarget);
 
     renderer.render(scene, camera);
 }
