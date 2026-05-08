@@ -119,7 +119,12 @@ export class Tank {
 
         // Calculate rotation including pitch
         const rot = new THREE.Euler(this.cameraPitch, this.mesh.rotation.y, 0, 'YXZ');
-        const bullet = new Bullet(this.scene, spawnPos, rot);
+        const bullet = this.bulletPool.get();
+        bullet.reset(spawnPos, rot);
         this.bullets.push(bullet);
+    }
+}s.push(bullet);
+    }
+}ullets.push(bullet);
     }
 }

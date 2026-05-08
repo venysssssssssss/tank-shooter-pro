@@ -3,12 +3,13 @@ import * as THREE from 'three';
 export class Ufo {
     constructor(scene) {
         this.scene = scene;
-        this.active = true;
+        this.active = false;
         this.speed = 24 + Math.random() * 24;
         this.time = 0;
 
         // Low poly UFO shape
         this.mesh = new THREE.Group();
+        this.mesh.visible = false;
 
         const baseGeometry = new THREE.CylinderGeometry(3, 1, 0.8, 12);
         const baseMaterial = new THREE.MeshStandardMaterial({ 
@@ -34,7 +35,21 @@ export class Ufo {
         dome.position.y = 0.4;
         this.mesh.add(dome);
 
-        // Spawn closer to make them visible
+        this.boundingBox = new THREE.Box3();
+        this.target = new THREE.Vector3();
+        this.velocity = new THREE.Vector3();
+        
+        // Slightly bigger scale for visibility
+        this.mesh.scale.set(1.5, 1.5, 1.5);
+
+        this.scene.add(this.mesh);
+    }
+
+    reset() {
+        this.active = true;
+        this.mesh.visible = true;
+        this.time = 0;
+
         const angle = Math.random() * Math.PI * 2;
         const radius = 80 + Math.random() * 40; // Closer spawn
         this.mesh.position.set(
@@ -44,20 +59,14 @@ export class Ufo {
         );
 
         // Move across the map
-        this.target = new THREE.Vector3(
+        this.target.set(
             (Math.random() - 0.5) * 80,
             15 + Math.random() * 20,
             (Math.random() - 0.5) * 80
         );
 
-        this.velocity = new THREE.Vector3().subVectors(this.target, this.mesh.position).normalize().multiplyScalar(this.speed);
-
-        this.boundingBox = new THREE.Box3();
-        
-        // Slightly bigger scale for visibility
-        this.mesh.scale.set(1.5, 1.5, 1.5);
-
-        this.scene.add(this.mesh);
+        this.speed = 24 + Math.random() * 24;
+        this.velocity.subVectors(this.target, this.mesh.position).normalize().multiplyScalar(this.speed);
     }
 
     update(deltaTime) {
@@ -83,12 +92,6 @@ export class Ufo {
     destroy() {
         if (!this.active) return;
         this.active = false;
-        this.scene.remove(this.mesh);
-        this.mesh.traverse((child) => {
-            if (child.isMesh) {
-                child.geometry.dispose();
-                child.material.dispose();
-            }
-        });
+        this.mesh.visible = false;
     }
 }

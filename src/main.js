@@ -81,7 +81,7 @@ function checkCollisions() {
         for (let j = tank.bullets.length - 1; j >= 0; j--) {
             const bullet = tank.bullets[j];
 
-            if (ufo.boundingBox.intersectsBox(bullet.boundingBox)) {
+            if (bullet.active && ufo.boundingBox.intersectsBox(bullet.boundingBox)) {
                 score += 100;
                 scoreElement.innerText = score;
                 
@@ -122,6 +122,7 @@ function animate(time) {
         const ufo = ufos[i];
         ufo.update(deltaTime);
         if (!ufo.active) {
+            ufoPool.release(ufo);
             ufos.splice(i, 1);
         }
     }
@@ -137,6 +138,9 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate(0);t);
 });
 
 animate(0);

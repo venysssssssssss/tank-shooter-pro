@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
 export class Bullet {
-    constructor(scene, position, rotationEuler) {
+    constructor(scene) {
         this.scene = scene;
         this.speed = 150; // Scaled for deltaTime
-        this.active = true;
+        this.active = false;
 
         // Geometry & Material
         const geometry = new THREE.SphereGeometry(0.2, 8, 8);
@@ -14,20 +14,24 @@ export class Bullet {
             emissiveIntensity: 0.8
         });
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.visible = false;
         
-        // Setup initial transform
-        this.mesh.position.copy(position);
-        
-        // Calculate velocity vector based on passed rotation (Euler YXZ)
-        this.velocity = new THREE.Vector3(0, 0, -1);
-        this.velocity.applyEuler(rotationEuler);
-        
-        this.velocity.normalize().multiplyScalar(this.speed);
-
-        // Bounding box for collisions
+        this.velocity = new THREE.Vector3();
         this.boundingBox = new THREE.Box3();
 
         this.scene.add(this.mesh);
+    }
+
+    reset(position, rotationEuler) {
+        this.active = true;
+        this.mesh.visible = true;
+        this.mesh.position.copy(position);
+        
+        this.velocity.set(0, 0, -1);
+        this.velocity.applyEuler(rotationEuler);
+        this.velocity.normalize().multiplyScalar(this.speed);
+        
+        this.boundingBox.setFromObject(this.mesh);
     }
 
     update(deltaTime) {
@@ -46,8 +50,6 @@ export class Bullet {
     destroy() {
         if (!this.active) return;
         this.active = false;
-        this.scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        this.mesh.visible = false;
     }
 }
