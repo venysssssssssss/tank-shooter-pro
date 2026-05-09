@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D UFO Shooter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">
+                <span class="label">SCORE</span>
+                <span id="score" class="value neon-text-blue">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">CREDITS</span>
+                <span id="credits" class="value neon-text-pink">0</span>
+            </div>
+        </div>
+        
+        <div id="crosshair">+</div>
+
+        <div id="menu" class="overlay">
+            <h1 class="neon-text-blue">NEON PROTOCOL</h1>
+            <button id="start-btn" class="neon-btn">INITIALIZE</button>
+            <div class="controls">
+                WASD to Move<br>
+                Mouse to Aim & Shoot
+            </div>
+        </div>
+
+        <div id="shop-overlay" class="overlay" style="display:none">
+            <h2 class="neon-text-pink">CYBER SHOP</h2>
+            <div class="shop-items">
+                <!-- Dynamic items -->
+            </div>
+            <button id="close-shop-btn" class="neon-btn small">BACK</button>
+        </div>
+
+        <div id="game-over" class="overlay" style="display:none">
+            <h2 class="neon-text-red">CONNECTION LOST</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <button id="revive-btn" class="neon-btn">REVIVE (AD)</button>
+            <button id="restart-btn" class="neon-btn small">REBOOT</button>
+        </div>
+    </div>
+    
+    <!-- Import map for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

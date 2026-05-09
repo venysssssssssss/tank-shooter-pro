@@ -6,11 +6,17 @@ export class CameraController {
         this.target = target;
         this.cameraOffset = new THREE.Vector3(0, 5, 12);
         this.lookTarget = new THREE.Vector3();
+        
+        // Shake logic
+        this.trauma = 0;
+        this.shakeIntensity = 0.5;
+    }
+
+    addTrauma(amount) {
+        this.trauma = Math.min(1.0, this.trauma + amount);
     }
 
     update(deltaTime) {
-        // Framerate-independent lerp: factor = 1 - exp(-speed * deltaTime)
-        // A speed of 10 approximates the old 0.15 at 60FPS
         const lerpFactor = 1 - Math.exp(-10 * deltaTime);
 
         const offset = this.cameraOffset.clone();
@@ -25,5 +31,15 @@ export class CameraController {
         this.lookTarget.add(this.target.mesh.position);
         
         this.camera.lookAt(this.lookTarget);
+
+        // Apply Shake
+        if (this.trauma > 0) {
+            const shake = Math.pow(this.trauma, 2) * this.shakeIntensity;
+            this.camera.position.x += (Math.random() - 0.5) * 2 * shake;
+            this.camera.position.y += (Math.random() - 0.5) * 2 * shake;
+            this.camera.position.z += (Math.random() - 0.5) * 2 * shake;
+            
+            this.trauma = Math.max(0, this.trauma - deltaTime * 1.5);
+        }
     }
 }

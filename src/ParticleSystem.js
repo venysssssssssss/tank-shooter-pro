@@ -3,89 +3,87 @@ import * as THREE from 'three';
 class Particle {
     constructor(scene) {
         this.scene = scene;
-        
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0xffaa00, 
-            transparent: true, 
-            opacity: 1 
+        this.active = false;
+        this.life = 0;
+        this.maxLife = 1.0;
+
+        const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.6);
+        this.material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffffff,
+            emissiveIntensity: 2.0,
+            toneMapped: false,
+            transparent: true
         });
         
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.active = false;
+        this.mesh = new THREE.Mesh(geometry, this.material);
+        this.mesh.visible = false;
         this.velocity = new THREE.Vector3();
-        this.life = 0;
-        this.maxLife = 1.0; 
+        
+        this.scene.add(this.mesh);
     }
 
-    spawn(position) {
-        this.mesh.position.copy(position);
-        
-        // Random outward velocity
-        this.velocity.set(
-            (Math.random() - 0.5) * 30,
-            (Math.random() - 0.5) * 30,
-            (Math.random() - 0.5) * 30
-        );
-        
-        this.mesh.scale.set(1, 1, 1);
-        this.mesh.material.opacity = 1;
-        this.life = this.maxLife;
+    reset(position, color) {
         this.active = true;
-        this.scene.add(this.mesh);
+        this.mesh.visible = true;
+        this.mesh.position.copy(position);
+        this.life = 0;
+        this.maxLife = 0.5 + Math.random() * 0.8;
+        
+        this.material.color.set(color);
+        this.material.emissive.set(color);
+        this.material.opacity = 1.0;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 15 + Math.random() * 25;
+        this.velocity.set(
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2
+        ).normalize().multiplyScalar(speed);
+        
+        this.mesh.lookAt(position.clone().add(this.velocity));
     }
 
     update(deltaTime) {
         if (!this.active) return;
 
-        this.life -= deltaTime;
-        if (this.life <= 0) {
-            this.active = false;
-            this.scene.remove(this.mesh);
-            return;
-        }
-
-        // Move
-        this.mesh.position.addScaledVector(this.velocity, deltaTime);
-        
-        // Gravity effect
-        this.velocity.y -= 15 * deltaTime;
-
-        // Fade & shrink
+        this.life += deltaTime;
         const progress = this.life / this.maxLife;
-        this.mesh.material.opacity = progress;
-        this.mesh.scale.setScalar(progress);
+
+        this.mesh.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+        this.material.opacity = 1.0 - progress;
+        this.mesh.scale.setScalar(1.0 - progress * 0.5);
+
+        if (this.life >= this.maxLife) {
+            this.active = false;
+            this.mesh.visible = false;
+        }
     }
 }
 
 export class ParticleSystem {
     constructor(scene) {
-        this.scene = scene;
         this.particles = [];
-        this.poolSize = 100; // Enough for a few simultaneous explosions
-        
-        for (let i = 0; i < this.poolSize; i++) {
+        for (let i = 0; i < 200; i++) {
             this.particles.push(new Particle(scene));
         }
     }
 
-    explode(position) {
-        const explosionSize = 15;
-        let spawned = 0;
-        
-        for (let i = 0; i < this.particles.length; i++) {
-            const p = this.particles[i];
+    explode(position, color = 0x00f2ff) {
+        let count = 0;
+        for (const p of this.particles) {
             if (!p.active) {
-                p.spawn(position);
-                spawned++;
-                if (spawned >= explosionSize) break;
+                p.reset(position, color);
+                count++;
+                if (count >= 25) break;
             }
         }
     }
 
     update(deltaTime) {
-        for (let i = 0; i < this.particles.length; i++) {
-            this.particles[i].update(deltaTime);
+        for (const p of this.particles) {
+            p.update(deltaTime);
         }
     }
 }

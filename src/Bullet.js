@@ -3,17 +3,20 @@ import * as THREE from 'three';
 export class Bullet {
     constructor(scene) {
         this.scene = scene;
-        this.speed = 150; // Scaled for deltaTime
+        this.speed = 180;
         this.active = false;
 
-        // Geometry & Material
-        const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+        // Laser Geometry (Long and thin)
+        const geometry = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
         const material = new THREE.MeshStandardMaterial({ 
             color: 0xffff00,
             emissive: 0xffff00,
-            emissiveIntensity: 0.8
+            emissiveIntensity: 2.0,
+            toneMapped: false
         });
+        
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.rotation.x = Math.PI / 2;
         this.mesh.visible = false;
         
         this.velocity = new THREE.Vector3();
@@ -30,6 +33,10 @@ export class Bullet {
         this.velocity.set(0, 0, -1);
         this.velocity.applyEuler(rotationEuler);
         this.velocity.normalize().multiplyScalar(this.speed);
+        
+        // Point the laser in the direction of travel
+        this.mesh.lookAt(position.clone().add(this.velocity));
+        this.mesh.rotateX(Math.PI / 2); // Adjust for cylinder orientation
         
         this.boundingBox.setFromObject(this.mesh);
     }
