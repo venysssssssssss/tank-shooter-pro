@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D UFO Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="monetization" content="$ilp.uphold.com/placeholder-wallet-address">
+    <title>Cyber-Arcade UFO Shooter</title>
+    <link rel="icon" href="data:,">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,6 +19,17 @@
             <div class="hud-item">
                 <span class="label">CREDITS</span>
                 <span id="credits" class="value neon-text-pink">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">NANOBYTES</span>
+                <span id="nanobytes" class="value neon-text-purple">0</span>
+            </div>
+        </div>
+
+        <div id="boss-ui" style="display:none">
+            <div class="label" style="text-align: center; color: #ff00ff; letter-spacing: 5px;">MOTHERSHIP</div>
+            <div id="boss-hp-bg">
+                <div id="boss-hp-bar"></div>
             </div>
         </div>
         
@@ -55,7 +69,13 @@
             }
         }
     </script>
-    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

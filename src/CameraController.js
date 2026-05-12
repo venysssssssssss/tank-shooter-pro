@@ -10,13 +10,14 @@ export class CameraController {
         // Shake logic
         this.trauma = 0;
         this.shakeIntensity = 0.5;
+        this.baseFov = 65;
     }
 
     addTrauma(amount) {
         this.trauma = Math.min(1.0, this.trauma + amount);
     }
 
-    update(deltaTime) {
+    update(deltaTime, combo = 0) {
         const lerpFactor = 1 - Math.exp(-10 * deltaTime);
 
         const offset = this.cameraOffset.clone();
@@ -31,6 +32,11 @@ export class CameraController {
         this.lookTarget.add(this.target.mesh.position);
         
         this.camera.lookAt(this.lookTarget);
+
+        // Dynamic FOV
+        const targetFov = this.baseFov + Math.min(combo * 2, 25);
+        this.camera.fov += (targetFov - this.camera.fov) * lerpFactor;
+        this.camera.updateProjectionMatrix();
 
         // Apply Shake
         if (this.trauma > 0) {

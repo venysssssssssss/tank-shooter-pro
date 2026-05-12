@@ -87,6 +87,39 @@ h1, h2 {
     text-shadow: 0 0 10px rgba(255, 51, 51, 0.7);
 }
 
+.neon-text-purple {
+    color: #b500ff;
+    text-shadow: 0 0 10px rgba(181, 0, 255, 0.7);
+}
+
+#boss-ui {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    pointer-events: none;
+}
+
+#boss-hp-bg {
+    width: 100%;
+    height: 15px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #ff00ff;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+#boss-hp-bar {
+    width: 100%;
+    height: 100%;
+    background: #ff00ff;
+    box-shadow: 0 0 10px #ff00ff;
+    transition: width 0.1s linear;
+}
+
 /* Buttons */
 .neon-btn {
     background: transparent;

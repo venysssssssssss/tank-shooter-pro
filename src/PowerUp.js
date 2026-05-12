@@ -21,11 +21,23 @@ export class PowerUp {
         this.scene.add(this.mesh);
     }
 
-    spawn(position) {
+    spawn(position, type) {
         this.active = true;
+        this.type = type;
         this.mesh.visible = true;
         this.mesh.position.copy(position);
         this.mesh.position.y = 2;
+
+        if (type === 'TRIPLE') {
+            this.material.color.setHex(0x00ff00);
+            this.material.emissive.setHex(0x00ff00);
+        } else if (type === 'SHIELD') {
+            this.material.color.setHex(0x0000ff);
+            this.material.emissive.setHex(0x0000ff);
+        } else if (type === 'SLOW') {
+            this.material.color.setHex(0xffaa00);
+            this.material.emissive.setHex(0xffaa00);
+        }
     }
 
     update(deltaTime) {

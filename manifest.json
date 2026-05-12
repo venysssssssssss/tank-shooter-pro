@@ -1,0 +1,10 @@
+{
+  "name": "Cyber-Arcade UFO Shooter",
+  "short_name": "UFO Shooter",
+  "description": "O Fino do Fino em Shooter 3D WebGL",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#050505",
+  "theme_color": "#00f2ff",
+  "orientation": "landscape"
+}

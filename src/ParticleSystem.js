@@ -62,11 +62,59 @@ class Particle {
     }
 }
 
+class ScorchMark {
+    constructor(scene) {
+        this.scene = scene;
+        this.active = false;
+        this.life = 0;
+        
+        const geo = new THREE.PlaneGeometry(6, 6);
+        this.mat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.8,
+            depthWrite: false
+        });
+        this.mesh = new THREE.Mesh(geo, this.mat);
+        this.mesh.rotation.x = -Math.PI / 2;
+        this.mesh.position.y = 0.01; // Slightly above ground
+        this.mesh.visible = false;
+        this.scene.add(this.mesh);
+    }
+
+    spawn(position) {
+        this.active = true;
+        this.life = 10.0; // 10 seconds
+        this.mesh.position.set(position.x, 0.01, position.z);
+        this.mesh.rotation.z = Math.random() * Math.PI * 2;
+        this.mesh.scale.setScalar(0.5 + Math.random() * 0.5);
+        this.mat.opacity = 0.8;
+        this.mesh.visible = true;
+    }
+
+    update(deltaTime) {
+        if (!this.active) return;
+        this.life -= deltaTime;
+        if (this.life < 2.0) {
+            this.mat.opacity = (this.life / 2.0) * 0.8;
+        }
+        if (this.life <= 0) {
+            this.active = false;
+            this.mesh.visible = false;
+        }
+    }
+}
+
 export class ParticleSystem {
     constructor(scene) {
         this.particles = [];
         for (let i = 0; i < 200; i++) {
             this.particles.push(new Particle(scene));
+        }
+        
+        this.scorches = [];
+        for (let i = 0; i < 20; i++) {
+            this.scorches.push(new ScorchMark(scene));
         }
     }
 
@@ -79,11 +127,21 @@ export class ParticleSystem {
                 if (count >= 25) break;
             }
         }
+        
+        for (const s of this.scorches) {
+            if (!s.active) {
+                s.spawn(position);
+                break;
+            }
+        }
     }
 
     update(deltaTime) {
         for (const p of this.particles) {
             p.update(deltaTime);
+        }
+        for (const s of this.scorches) {
+            s.update(deltaTime);
         }
     }
 }

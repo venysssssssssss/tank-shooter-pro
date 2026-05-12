@@ -90,6 +90,22 @@ export class Tank {
         this.muzzleGlow.visible = false;
         this.barrelPivot.add(this.muzzleGlow);
 
+        // Shield Mesh
+        const shieldGeo = new THREE.SphereGeometry(4.5, 16, 16);
+        const shieldMat = new THREE.MeshStandardMaterial({
+            color: 0x0000ff,
+            emissive: 0x0000ff,
+            emissiveIntensity: 1.0,
+            transparent: true,
+            opacity: 0.3,
+            toneMapped: false
+        });
+        this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+        this.shieldMesh.visible = false;
+        this.mesh.add(this.shieldMesh);
+
+        this.boundingBox = new THREE.Box3();
+
         this.scene.add(this.mesh);
     }
 
@@ -97,6 +113,12 @@ export class Tank {
         if (this.powerUpTimer > 0) {
             this.powerUpTimer -= deltaTime;
             if (this.powerUpTimer <= 0) this.powerUpType = null;
+        }
+
+        this.shieldMesh.visible = this.powerUpType === 'SHIELD';
+        if (this.shieldMesh.visible) {
+            this.shieldMesh.rotation.y += deltaTime;
+            this.shieldMesh.rotation.x += deltaTime * 0.5;
         }
 
         if (this.inputManager.keys.isLocked) {
@@ -137,6 +159,8 @@ export class Tank {
                 this.bullets.splice(i, 1);
             }
         }
+        
+        this.boundingBox.setFromObject(this.mesh);
     }
 
     shoot() {

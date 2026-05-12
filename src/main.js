@@ -23,25 +23,31 @@ let currentState = GAME_STATE.MENU;
 
 let score = 0;
 let credits = parseInt(localStorage.getItem('neon_credits')) || 0;
+let nanobytes = parseInt(localStorage.getItem('neon_nanobytes')) || 0;
 let highScore = parseInt(localStorage.getItem('neon_highscore')) || 0;
 
 const ui = {
     score: document.getElementById('score'),
     credits: document.getElementById('credits'),
+    nanobytes: document.getElementById('nanobytes'),
     menu: document.getElementById('menu'),
     gameOver: document.getElementById('game-over'),
     finalScore: document.getElementById('final-score'),
     startBtn: document.getElementById('start-btn'),
-    restartBtn: document.getElementById('restart-btn')
+    restartBtn: document.getElementById('restart-btn'),
+    bossUi: document.getElementById('boss-ui'),
+    bossHp: document.getElementById('boss-hp-bar')
 };
 
 function updateUI() {
     ui.score.innerText = score;
     ui.credits.innerText = credits;
+    ui.nanobytes.innerText = nanobytes;
 }
 
 function saveData() {
     localStorage.setItem('neon_credits', credits);
+    localStorage.setItem('neon_nanobytes', nanobytes);
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('neon_highscore', highScore);
@@ -118,6 +124,10 @@ const powerUp = new PowerUp(scene);
 // --- Game Logic ---
 let lastUfoSpawn = 0;
 let ufoSpawnRate = 2000;
+let hitstopTimer = 0;
+let combo = 0;
+let comboTimer = 0;
+let bossActive = false;
 
 function resetGame() {
     score = 0;
@@ -133,6 +143,7 @@ function resetGame() {
     ui.menu.style.display = 'none';
     ui.gameOver.style.display = 'none';
     audioManager.playClick();
+    audioManager.startMusic();
 }
 
 ui.startBtn.addEventListener('click', () => resetGame());
@@ -157,10 +168,6 @@ function checkCollisions() {
             const bullet = tank.bullets[j];
 
             if (bullet.active && ufo.boundingBox.intersectsBox(bullet.boundingBox)) {
-                score += 100;
-                credits += 5;
-                updateUI();
-                
                 bullet.destroy();
                 ufoHit = true;
                 break;
@@ -168,34 +175,127 @@ function checkCollisions() {
         }
 
         if (ufoHit) {
-            audioManager.playExplosion();
-            cameraController.addTrauma(0.4);
-            particleSystem.explode(ufo.mesh.position, 0xff00ff);
-            
-            // Random Powerup Spawn
-            if (Math.random() < 0.15 && !powerUp.active) {
-                powerUp.spawn(ufo.mesh.position);
-            }
+            if (ufo.takeDamage(1)) {
+                audioManager.playExplosion();
+                cameraController.addTrauma(ufo.type === 'TANK' || ufo.type === 'BOSS' ? 0.8 : 0.4);
+                
+                let color = 0xff00ff;
+                if (ufo.type === 'TANK') color = 0xff6600;
+                else if (ufo.type === 'KAMIKAZE') color = 0xff0000;
+                else if (ufo.type === 'BOSS') color = 0x00f2ff;
 
-            ufo.destroy();
-            ufoPool.release(ufo);
-            ufos.splice(i, 1);
+                particleSystem.explode(ufo.mesh.position, color);
+                
+                hitstopTimer = (ufo.type === 'TANK' || ufo.type === 'BOSS') ? 0.08 : 0.03; 
+                combo += 1;
+                comboTimer = 3.0;
+                
+                if (ufo.type === 'BOSS') {
+                    score += 2000;
+                    credits += 100;
+                    nanobytes += 5; // Boss drops premium currency
+                    bossActive = false;
+                    ui.bossUi.style.display = 'none';
+                } else if (ufo.type === 'TANK') {
+                    score += 500;
+                    credits += 25;
+                } else {
+                    score += 100;
+                    credits += 5;
+                }
+                
+                updateUI();
+                
+                const powerUpChance = ufo.type === 'TANK' || ufo.type === 'BOSS' ? 1.0 : 0.15;
+                if (Math.random() < powerUpChance && !powerUp.active) {
+                    const types = ['TRIPLE', 'SHIELD', 'SLOW'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    powerUp.spawn(ufo.mesh.position, type);
+                }
+
+                ufo.destroy();
+                ufoPool.release(ufo);
+                ufos.splice(i, 1);
+            } else {
+                if (ufo.type === 'BOSS') {
+                    ui.bossHp.style.width = `${(ufo.hp / ufo.maxHp) * 100}%`;
+                }
+                particleSystem.explode(ufo.mesh.position, 0xffffff); // mini spark
+                audioManager.playClick(); // small hit sound
+            }
+            continue;
+        }
+
+        // Tank vs UFO Collision (Player Death)
+        if (tank.boundingBox && ufo.boundingBox.intersectsBox(tank.boundingBox)) {
+            if (tank.powerUpType === 'SHIELD') {
+                tank.powerUpType = null; // Consume shield
+                audioManager.playExplosion();
+                cameraController.addTrauma(0.5);
+                particleSystem.explode(ufo.mesh.position, 0xff00ff);
+                ufo.destroy();
+                ufoPool.release(ufo);
+                ufos.splice(i, 1);
+            } else {
+                // Game Over
+                currentState = GAME_STATE.GAMEOVER;
+                audioManager.playExplosion();
+                audioManager.stopMusic();
+                cameraController.addTrauma(1.0);
+                particleSystem.explode(tank.mesh.position, 0xff0000);
+                ui.finalScore.innerText = score;
+                ui.gameOver.style.display = 'block';
+                document.exitPointerLock();
+                saveData();
+            }
         }
     }
 }
 
 // --- Main Loop ---
 const clock = new THREE.Clock();
+let fpsTimer = 0;
+let framesCount = 0;
 
 function animate(time) {
     requestAnimationFrame(animate);
-    const deltaTime = clock.getDelta();
+    const normalDelta = clock.getDelta();
+    let deltaTime = normalDelta;
+
+    // Post-processing optimization
+    fpsTimer += normalDelta;
+    framesCount++;
+    if (fpsTimer > 1.0) {
+        if (framesCount < 40) {
+            composer.removePass(bloomPass); // Disable bloom if low FPS
+        }
+        fpsTimer = 0;
+        framesCount = 0;
+    }
+
+    if (hitstopTimer > 0) {
+        hitstopTimer -= normalDelta;
+        composer.render();
+        return;
+    }
 
     if (currentState === GAME_STATE.PLAYING) {
-        tank.update(deltaTime);
+        if (comboTimer > 0) {
+            comboTimer -= normalDelta;
+            if (comboTimer <= 0) combo = 0;
+        }
+        
+        audioManager.setCombo(combo);
+
+        if (tank.powerUpType === 'SLOW') {
+
+            deltaTime *= 0.3; // 30% speed for enemies
+        }
+
+        tank.update(normalDelta); // Tank moves at normal speed
         spawnUfos(time);
 
-        powerUp.update(deltaTime);
+        powerUp.update(normalDelta);
         if (powerUp.active && tank.mesh.position.distanceTo(powerUp.mesh.position) < 4) {
             tank.applyPowerUp(powerUp.collect());
             audioManager.playClick();
@@ -211,8 +311,8 @@ function animate(time) {
         }
 
         checkCollisions();
-        particleSystem.update(deltaTime);
-        cameraController.update(deltaTime);
+        particleSystem.update(normalDelta);
+        cameraController.update(normalDelta, combo); // Pass normal time and combo for FOV
         
         if (time % 1000 < 20) saveData();
     }
