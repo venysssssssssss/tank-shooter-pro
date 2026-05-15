@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 
 export class Bullet {
-    constructor(scene) {
+    scene: THREE.Scene;
+    speed: number;
+    active: boolean;
+    mesh: THREE.Mesh;
+    velocity: THREE.Vector3;
+    boundingBox: THREE.Box3;
+
+    constructor(scene: THREE.Scene) {
         this.scene = scene;
         this.speed = 180;
         this.active = false;
@@ -25,7 +32,7 @@ export class Bullet {
         this.scene.add(this.mesh);
     }
 
-    reset(position, rotationEuler) {
+    reset(position: THREE.Vector3, rotationEuler: THREE.Euler): void {
         this.active = true;
         this.mesh.visible = true;
         this.mesh.position.copy(position);
@@ -41,7 +48,7 @@ export class Bullet {
         this.boundingBox.setFromObject(this.mesh);
     }
 
-    update(deltaTime) {
+    update(deltaTime: number): void {
         if (!this.active) return;
 
         const step = this.velocity.clone().multiplyScalar(deltaTime);
@@ -54,7 +61,7 @@ export class Bullet {
         }
     }
 
-    destroy() {
+    destroy(): void {
         if (!this.active) return;
         this.active = false;
         this.mesh.visible = false;

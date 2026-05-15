@@ -13,6 +13,10 @@
     <div id="ui">
         <div id="hud">
             <div class="hud-item">
+                <span class="label">WAVE</span>
+                <span id="wave" class="value neon-text-blue">1</span>
+            </div>
+            <div class="hud-item">
                 <span class="label">SCORE</span>
                 <span id="score" class="value neon-text-blue">0</span>
             </div>
@@ -37,6 +41,18 @@
 
         <div id="menu" class="overlay">
             <h1 class="neon-text-blue">NEON PROTOCOL</h1>
+            <div id="upgrades-panel" style="margin-bottom: 20px; text-align: left; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; border-radius: 5px;">
+                <h3 style="color: #00f2ff; margin-top: 0; text-align: center;">UPGRADES</h3>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color:#fff;">Fire Rate (<span id="upg-fire-lvl">0</span>/5)</span>
+                    <button id="btn-upg-fire" class="neon-btn" style="padding: 5px 10px; font-size: 14px;">BUY (100 C)</button>
+                </div>
+                <div style="display:flex; justify-content: space-between;">
+                    <span style="color:#fff;">Speed (<span id="upg-speed-lvl">0</span>/5)</span>
+                    <button id="btn-upg-speed" class="neon-btn" style="padding: 5px 10px; font-size: 14px;">BUY (100 C)</button>
+                </div>
+            </div>
+            <button id="daily-reward-btn" class="neon-btn" style="background: rgba(0, 255, 0, 0.1); border-color: #00ff00; color: #00ff00; margin-bottom: 15px; font-size: 16px;">CLAIM DAILY REWARD (+500 C)</button><br>
             <button id="start-btn" class="neon-btn">INITIALIZE</button>
             <div class="controls">
                 WASD to Move<br>
@@ -60,22 +76,6 @@
         </div>
     </div>
     
-    <!-- Import map for Three.js -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
-    </script>
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

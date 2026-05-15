@@ -1,5 +1,18 @@
 export class InputManager {
-    constructor(domElement) {
+    keys: {
+        forward: boolean;
+        backward: boolean;
+        left: boolean;
+        right: boolean;
+        shootKey: boolean;
+        shootMouse: boolean;
+        movementX: number;
+        movementY: number;
+        isLocked: boolean;
+        readonly shoot: boolean;
+    };
+
+    constructor(domElement: HTMLElement) {
         this.keys = {
             forward: false,
             backward: false,
@@ -16,7 +29,7 @@ export class InputManager {
         this.initInput(domElement);
     }
 
-    initInput(domElement) {
+    initInput(domElement: HTMLElement): void {
         window.addEventListener('keydown', (e) => {
             switch (e.code) {
                 case 'ArrowUp':
