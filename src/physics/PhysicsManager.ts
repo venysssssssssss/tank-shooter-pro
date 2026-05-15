@@ -1,5 +1,25 @@
 import { Box3, Vector3 } from 'three';
 
+export enum BiomeType {
+    NORMAL,
+    ICE,
+    DESERT,
+    CYBER
+}
+
+interface BiomeModifiers {
+    frictionMul: number;
+    speedMul: number;
+    accelMul: number;
+}
+
+const biomeMods: Record<BiomeType, BiomeModifiers> = {
+    [BiomeType.NORMAL]: { frictionMul: 1.0, speedMul: 1.0, accelMul: 1.0 },
+    [BiomeType.ICE]: { frictionMul: 0.2, speedMul: 1.5, accelMul: 0.8 },
+    [BiomeType.DESERT]: { frictionMul: 0.8, speedMul: 0.9, accelMul: 0.9 },
+    [BiomeType.CYBER]: { frictionMul: 1.2, speedMul: 1.1, accelMul: 1.2 },
+};
+
 export class PhysicsManager {
     
     // Calculates velocity based on acceleration and friction
@@ -10,26 +30,33 @@ export class PhysicsManager {
         deltaTime: number, 
         forward: boolean, 
         backward: boolean, 
-        maxSpeed: number
+        maxSpeed: number,
+        biome: BiomeType = BiomeType.NORMAL
     ): number {
+        const mods = biomeMods[biome];
+        
+        const finalAccel = acceleration * mods.accelMul;
+        const finalFric = friction * mods.frictionMul;
+        const finalSpeed = maxSpeed * mods.speedMul;
+
         let newVelocity = currentVelocity;
         
         if (forward) {
-            newVelocity -= acceleration * deltaTime;
+            newVelocity -= finalAccel * deltaTime;
         } else if (backward) {
-            newVelocity += acceleration * deltaTime;
+            newVelocity += finalAccel * deltaTime;
         } else {
             if (newVelocity < 0) {
-                newVelocity += friction * deltaTime;
+                newVelocity += finalFric * deltaTime;
                 if (newVelocity > 0) newVelocity = 0;
             } else if (newVelocity > 0) {
-                newVelocity -= friction * deltaTime;
+                newVelocity -= finalFric * deltaTime;
                 if (newVelocity < 0) newVelocity = 0;
             }
         }
         
-        if (newVelocity < -maxSpeed) newVelocity = -maxSpeed;
-        if (newVelocity > maxSpeed) newVelocity = maxSpeed;
+        if (newVelocity < -finalSpeed) newVelocity = -finalSpeed;
+        if (newVelocity > finalSpeed) newVelocity = finalSpeed;
         
         return newVelocity;
     }
