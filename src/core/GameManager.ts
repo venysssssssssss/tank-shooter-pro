@@ -18,6 +18,7 @@ import { WaveManager } from '../WaveManager';
 import { eventBus } from '../EventBus';
 import { playerProfile } from '../PlayerProfileStore';
 import { BaseTank, MediumTank, LightTank, HeavyTank } from '../tanks/TankClasses';
+import { RewardSystem } from './RewardSystem';
 
 export type GameState = 'menu' | 'playing' | 'gameover';
 
@@ -39,6 +40,7 @@ export class GameManager {
     powerUp: PowerUp;
     damageNumberManager: DamageNumberManager;
     waveManager: WaveManager;
+    rewardSystem = new RewardSystem();
     
     ufos: Ufo[] = [];
     ufoPool: ObjectPool<Ufo>;
@@ -141,6 +143,10 @@ export class GameManager {
             const ufo = this.ufoPool.get();
             ufo.reset(type);
             this.ufos.push(ufo);
+            
+            // Spawn portal particle effect at warp-in location
+            const color = ufo.getColor();
+            this.particleSystem.explode(ufo.mesh.position, color, 15);
         });
 
         // Pools for enemy bullets
@@ -297,6 +303,20 @@ export class GameManager {
         
         this.dustPoints = new THREE.Points(dustGeo, dustMat);
         this.scene.add(this.dustPoints);
+
+        // 4. Safe Arena Center visual indicator (glowing ring with radius 15)
+        const centerRingGeo = new THREE.RingGeometry(14.8, 15.2, 64);
+        const centerRingMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff88,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.35,
+            depthWrite: false
+        });
+        const centerRing = new THREE.Mesh(centerRingGeo, centerRingMat);
+        centerRing.rotation.x = -Math.PI / 2;
+        centerRing.position.y = 0.02;
+        this.scene.add(centerRing);
     }
 
     createAimCursor(): void {
@@ -339,7 +359,9 @@ export class GameManager {
             'wave', 'score', 'credits', 'nanobytes', 'menu', 'game-over', 
             'final-score', 'start-btn', 'restart-btn', 'boss-ui', 'boss-hp-bar',
             'upg-fire-lvl', 'btn-upg-fire', 'upg-speed-lvl', 'btn-upg-speed', 
-            'daily-reward-btn', 'revive-btn'
+            'daily-reward-btn', 'revive-btn', 'hp', 'ability-status', 'powerup-hud',
+            'powerup-status', 'victory-ui', 'victory-score', 'victory-replay-btn',
+            'victory-endless-btn'
         ];
         ids.forEach(id => {
             this.ui[id] = document.getElementById(id);
@@ -359,6 +381,27 @@ export class GameManager {
                 if (this.ui['boss-ui']) this.ui['boss-ui'].style.display = 'none';
             }
         });
+
+        eventBus.on('WAVE_COMPLETED', (data) => {
+            if (data.wave === 5) {
+                this.triggerVictory();
+            }
+        });
+
+        // Setup replay button click from victory
+        if (this.ui['victory-replay-btn']) {
+            this.ui['victory-replay-btn'].addEventListener('click', () => {
+                if (this.ui['victory-ui']) this.ui['victory-ui'].style.display = 'none';
+                this.resetGame();
+            });
+        }
+
+        // Setup endless button click from victory
+        if (this.ui['victory-endless-btn']) {
+            this.ui['victory-endless-btn'].addEventListener('click', () => {
+                this.continueEndless();
+            });
+        }
 
         // Setup revive button click
         if (this.ui['revive-btn']) {
@@ -398,6 +441,39 @@ export class GameManager {
         if (this.ui.credits) this.ui.credits.innerText = playerProfile.get().credits.toString();
         if (this.ui.nanobytes) this.ui.nanobytes.innerText = playerProfile.get().nanobytes.toString();
         
+        // Update HP
+        if (this.ui.hp && this.tank) {
+            const currentHp = Math.round(this.tank.currentHealth);
+            const maxHp = this.tank.maxHealth;
+            this.ui.hp.innerText = `${currentHp}/${maxHp}`;
+            const pct = currentHp / maxHp;
+            this.ui.hp.className = "value " + (pct > 0.5 ? "neon-text-green" : pct > 0.25 ? "neon-text-pink" : "neon-text-red");
+        }
+
+        // Update Ability Status
+        if (this.ui['ability-status'] && this.tank) {
+            if (this.tank.abilityActive) {
+                this.ui['ability-status'].innerText = "ACTIVE";
+                this.ui['ability-status'].className = "value neon-text-pink";
+            } else if (this.tank.abilityCooldown > 0) {
+                this.ui['ability-status'].innerText = `${this.tank.abilityCooldown.toFixed(1)}s`;
+                this.ui['ability-status'].className = "value neon-text-red";
+            } else {
+                this.ui['ability-status'].innerText = "READY";
+                this.ui['ability-status'].className = "value neon-text-blue";
+            }
+        }
+
+        // Update Power-up Status
+        if (this.ui['powerup-hud'] && this.ui['powerup-status'] && this.tank) {
+            if (this.tank.powerUpType && this.tank.powerUpTimer > 0) {
+                this.ui['powerup-hud'].style.display = 'flex';
+                this.ui['powerup-status'].innerText = `${this.tank.powerUpType} (${this.tank.powerUpTimer.toFixed(1)}s)`;
+            } else {
+                this.ui['powerup-hud'].style.display = 'none';
+            }
+        }
+        
         const upg = playerProfile.get().upgrades;
         if (this.ui['upg-fire-lvl']) this.ui['upg-fire-lvl'].innerText = upg.fireRate.toString();
         if (this.ui['btn-upg-fire']) {
@@ -425,9 +501,12 @@ export class GameManager {
         this.score = 0;
         this.combo = 0;
         this.comboTimer = 0;
-        this.updateUI();
         this.tank.mesh.position.set(0, 0, 0);
         this.tank.velocity = 0;
+        this.tank.currentHealth = this.tank.maxHealth;
+        this.tank.powerUpType = null;
+        this.tank.invulnerableTimer = 0;
+        this.updateUI();
         
         this.ufos.forEach(ufo => {
             ufo.destroy();
@@ -452,7 +531,7 @@ export class GameManager {
     revivePlayer(): void {
         let success = false;
         if (playerProfile.get().nanobytes >= 2) {
-            success = playerProfile.spendPremium(2);
+            success = playerProfile.spendNanobytes(2);
         } else if (playerProfile.get().credits >= 200) {
             success = playerProfile.spendCredits(200);
         }
@@ -462,10 +541,46 @@ export class GameManager {
             if (this.ui['game-over']) this.ui['game-over'].style.display = 'none';
             this.tank.mesh.position.set(0, 0, 0);
             this.tank.velocity = 0;
+            this.tank.currentHealth = this.tank.maxHealth;
+            this.tank.powerUpType = null;
+            this.tank.invulnerableTimer = 2.0; // 2 seconds of invulnerability on revive
             this.audioManager.playClick();
             this.audioManager.startMusic();
             this.updateUI();
         }
+    }
+
+    triggerVictory(): void {
+        this.state = 'gameover'; // Freeze gameplay loop update
+        this.audioManager.stopMusic();
+        
+        // Save score / high score
+        this.saveData();
+
+        // Award credits and nanobytes for securing the sector
+        playerProfile.get().credits += 500;
+        playerProfile.get().nanobytes += 10;
+        playerProfile.save();
+
+        this.updateUI();
+
+        if (this.ui['victory-score']) {
+            this.ui['victory-score'].innerText = this.score.toString();
+        }
+        if (this.ui['victory-ui']) {
+            this.ui['victory-ui'].style.display = 'block';
+        }
+    }
+
+    continueEndless(): void {
+        if (this.ui['victory-ui']) {
+            this.ui['victory-ui'].style.display = 'none';
+        }
+        this.state = 'playing';
+        this.audioManager.startMusic();
+        
+        // Resume wave manager to spawn wave 6
+        this.waveManager.startWave();
     }
 
     onWindowResize(): void {
@@ -603,6 +718,8 @@ export class GameManager {
                 const rotDirection = index % 2 === 0 ? 1 : -1;
                 ring.rotation.z += rotDirection * normalDelta * 1.5;
             });
+
+            this.updateUI();
             
             if (time % 1000 < 20) this.saveData();
         }
@@ -610,31 +727,30 @@ export class GameManager {
         this.composer.render();
     };
 
-    onPlayerHit(): void {
+    onPlayerHit(damageAmount: number = 25): void {
+        if (this.state !== 'playing') return;
+        if (this.tank.invulnerable || this.tank.invulnerableTimer > 0) return;
+
         const isShielded = this.tank.powerUpType === 'SHIELD' || 
                            (this.tank.tankStats instanceof MediumTank && this.tank.abilityActive);
-        
-        if (this.tank.invulnerable) {
-            // Invulnerable (e.g. Light Tank dashing)
-            return;
-        }
 
-        if (isShielded) {
-            if (this.tank.powerUpType === 'SHIELD') {
-                this.tank.powerUpType = null; // Consume powerup shield
-            }
-            this.audioManager.playExplosion();
-            this.cameraController.addTrauma(0.5);
-            this.particleSystem.explode(this.tank.mesh.position, 0xff00ff, 15);
-            eventBus.emit('PLAYER_HIT', { shielded: true });
-        } else {
+        // Execute damage on the tank
+        const isDead = this.tank.takeDamage(damageAmount);
+
+        // Play standard hit feedback
+        this.audioManager.playExplosion();
+        this.cameraController.addTrauma(isDead ? 1.0 : 0.4);
+        
+        // Spawn particle effects at player position
+        const particleColor = isShielded ? 0xff00ff : 0xff0000;
+        this.particleSystem.explode(this.tank.mesh.position, particleColor, isDead ? 40 : 15);
+
+        this.updateUI();
+
+        if (isDead) {
             // Game Over
             this.state = 'gameover';
-            this.audioManager.playExplosion();
             this.audioManager.stopMusic();
-            this.cameraController.addTrauma(1.0);
-            this.particleSystem.explode(this.tank.mesh.position, 0xff0000, 40);
-            eventBus.emit('PLAYER_HIT', { shielded: false });
             eventBus.emit('GAME_OVER', { score: this.score });
             if (this.ui['final-score']) this.ui['final-score'].innerText = this.score.toString();
             if (this.ui['game-over']) this.ui['game-over'].style.display = 'block';
@@ -683,32 +799,12 @@ export class GameManager {
                     this.combo += 1;
                     this.comboTimer = 3.0;
                     
-                    if (ufo.type === 'BOSS') {
-                        this.score += 3000;
-                        playerProfile.get().credits += 150;
-                        playerProfile.get().nanobytes += 5; // Boss drops premium currency
-                        playerProfile.addXP(1000);
-                        if (this.ui['boss-ui']) this.ui['boss-ui'].style.display = 'none';
-                    } else if (ufo.type === 'TANK') {
-                        this.score += 500;
-                        playerProfile.get().credits += 25;
-                        playerProfile.addXP(150);
-                    } else if (ufo.type === 'SNIPER') {
-                        this.score += 250;
-                        playerProfile.get().credits += 15;
-                        playerProfile.addXP(100);
-                    } else if (ufo.type === 'SPAWNER') {
-                        this.score += 400;
-                        playerProfile.get().credits += 30;
-                        playerProfile.addXP(200);
-                    } else if (ufo.type === 'KAMIKAZE') {
-                        this.score += 150;
-                        playerProfile.get().credits += 10;
-                        playerProfile.addXP(75);
-                    } else {
-                        this.score += 100;
-                        playerProfile.get().credits += 5;
-                        playerProfile.addXP(50);
+                    const reward = this.rewardSystem.getRewardForType(ufo.type, 1.0);
+                    this.rewardSystem.applyReward(reward);
+                    this.score += reward.score;
+
+                    if (ufo.type === 'BOSS' && this.ui['boss-ui']) {
+                        this.ui['boss-ui'].style.display = 'none';
                     }
                     
                     this.updateUI();
@@ -716,7 +812,7 @@ export class GameManager {
                     
                     const powerUpChance = ufo.type === 'TANK' || ufo.type === 'BOSS' ? 1.0 : 0.15;
                     if (Math.random() < powerUpChance && !this.powerUp.active) {
-                        const types = ['TRIPLE', 'SHIELD', 'SLOW'];
+                        const types = ['TRIPLE', 'SHIELD', 'SLOW', 'REGEN'];
                         const type = types[Math.floor(Math.random() * types.length)];
                         this.powerUp.spawn(ufo.mesh.position, type);
                     }
@@ -737,11 +833,16 @@ export class GameManager {
 
             // Tank vs UFO Collision
             if (this.tank.boundingBox && ufo.boundingBox.intersectsBox(this.tank.boundingBox)) {
+                let damage = 25;
+                if (ufo.type === 'KAMIKAZE') damage = 40;
+                else if (ufo.type === 'BOSS') damage = 50;
+                else if (ufo.type === 'TANK') damage = 35;
+
                 ufo.destroy();
                 this.ufoPool.release(ufo);
                 this.ufos.splice(i, 1);
                 
-                this.onPlayerHit();
+                this.onPlayerHit(damage);
             }
         }
 
@@ -753,7 +854,7 @@ export class GameManager {
                 this.enemyBulletPool.release(eb);
                 this.enemyBullets.splice(i, 1);
                 
-                this.onPlayerHit();
+                this.onPlayerHit(20); // 20 damage from enemy lasers
             }
         }
     }

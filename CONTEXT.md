@@ -1,13 +1,14 @@
 # Context - Tank Shooter Pro
 
 ## Current Task
-- Completed gameplay polish sprint, resolving movement boundaries/collision, laser sight alignment, holographic borders, floating dust, dual-lighting, and enemy hit flash feedbacks.
+- Completed the single-player vertical slice stabilization, resolving input ability spam, currency mismatch bugs, and adding comprehensive test coverage.
 
 ## Key Decisions
-- **3rd-Person Aiming & Laser**: decopuled steering from mouse-orbit aiming, adding a class-colored laser line from muzzle to ground aim point.
-- **Arena Physics & Boundaries**: added circle-circle collision resolution for pillars and clamped coordinate boundaries to [±60, ±60].
-- **Cyberpunk Visuals**: added floating ambient neon dust and a magenta fill light opposite to the cyan key light.
+- **Ability Triggers**: Modified the input detection to trigger class abilities exactly once per keydown action, requiring a key release.
+- **Nanobytes Integration**: Added `spendNanobytes` and `addNanobytes` methods to `PlayerProfileStore` to resolve the currency deduction bug in `revivePlayer`.
+- **Core Tests & Docs**: Created a complete unit testing suite for the Tank entity's core loop, alongside game design, architecture, and verification documentation.
 
 ## Next Steps
-- Implement online multiplayer sync (restoring `NetworkManager.ts` & finishing Express+Socket.IO server in `server/`).
-- Conduct performance profiling on mobile/low-end target platforms.
+- Implement online multiplayer synchronization (socket.io communication with server backend).
+- Design and integrate the multiplayer matchmaking screen and lobby system.
+- Build visual models or custom shaders for cyberpunk enemies and arena effects.

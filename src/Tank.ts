@@ -46,12 +46,16 @@ export class Tank {
     abilityCooldown = 0; // remaining cooldown in seconds
     abilityActive = false;
     abilityActiveTimer = 0;
+    abilityKeyWasDown = false;
     
     // Multipliers for upgrades and abilities
     damageMultiplier = 1;
     fireRateMultiplier = 1;
     speedMultiplier = 1;
     invulnerable = false;
+    maxHealth!: number;
+    currentHealth!: number;
+    invulnerableTimer = 0;
 
     // Local aim target
     aimPoint = new THREE.Vector3();
@@ -67,6 +71,8 @@ export class Tank {
         this.physicsManager = new PhysicsManager();
         
         const upgrades = playerProfile.get().upgrades;
+        this.maxHealth = this.tankStats.maxHealth + (upgrades.maxHp * 20);
+        this.currentHealth = this.maxHealth;
         this.shootTimer = this.tankStats.shootDelay;
         
         // Base delay minus upgrade fire rate bonus
@@ -208,6 +214,20 @@ export class Tank {
             if (this.powerUpTimer <= 0) this.powerUpType = null;
         }
 
+        // Regen powerup healing effect: 5 HP per second
+        if (this.powerUpType === 'REGEN' && this.powerUpTimer > 0) {
+            this.heal(5 * deltaTime);
+        }
+
+        // Invulnerability frames & blinking visual feedback
+        if (this.invulnerableTimer > 0) {
+            this.invulnerableTimer -= deltaTime;
+            const blink = Math.floor(this.invulnerableTimer * 15) % 2 === 0;
+            this.mesh.visible = blink;
+        } else {
+            this.mesh.visible = true;
+        }
+
         // Shield visibility (active either via powerup shield or Medium Tank energy shield ability)
         const isShieldActive = this.powerUpType === 'SHIELD' || (this.tankStats instanceof MediumTank && this.abilityActive);
         this.shieldMesh.visible = isShieldActive;
@@ -262,7 +282,10 @@ export class Tank {
         }
 
         // Ability activation trigger (Q or Shift)
-        if (this.inputManager.keys.ability && this.abilityCooldown <= 0 && !this.abilityActive) {
+        const abilityPressedThisFrame = this.inputManager.keys.ability && !this.abilityKeyWasDown;
+        this.abilityKeyWasDown = this.inputManager.keys.ability;
+
+        if (abilityPressedThisFrame && this.abilityCooldown <= 0 && !this.abilityActive) {
             this.activateAbility();
         }
 
@@ -465,6 +488,34 @@ export class Tank {
     applyPowerUp(type: string): void {
         this.powerUpType = type;
         this.powerUpTimer = 10; // 10 seconds duration
+    }
+
+    takeDamage(amount: number): boolean {
+        if (this.invulnerable || this.invulnerableTimer > 0) return false;
+        
+        const isShieldActive = this.powerUpType === 'SHIELD' || 
+                               (this.tankStats instanceof MediumTank && this.abilityActive);
+        
+        if (isShieldActive) {
+            if (this.powerUpType === 'SHIELD') {
+                this.powerUpType = null; // Consume powerup shield
+            }
+            // Shield absorbs the damage completely
+            eventBus.emit('PLAYER_HIT', { shielded: true });
+            this.invulnerableTimer = 0.5; // Short I-frames even on shield hit to prevent double-hitting
+            return false;
+        }
+        
+        this.currentHealth = Math.max(0, this.currentHealth - amount);
+        this.invulnerableTimer = 1.0; // 1 second of invulnerability on taking real damage
+        
+        eventBus.emit('PLAYER_HIT', { shielded: false, damage: amount, currentHP: this.currentHealth });
+        
+        return this.currentHealth <= 0;
+    }
+
+    heal(amount: number): void {
+        this.currentHealth = Math.min(this.maxHealth, this.currentHealth + amount);
     }
 
     destroy(): void {

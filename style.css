@@ -92,6 +92,11 @@ h1, h2 {
     text-shadow: 0 0 10px rgba(181, 0, 255, 0.7);
 }
 
+.neon-text-green {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.7);
+}
+
 #boss-ui {
     position: absolute;
     top: 20px;

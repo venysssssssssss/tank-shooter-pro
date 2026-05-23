@@ -44,6 +44,9 @@ export class PowerUp {
         } else if (type === 'SLOW') {
             this.material.color.setHex(0xffaa00);
             this.material.emissive.setHex(0xffaa00);
+        } else if (type === 'REGEN') {
+            this.material.color.setHex(0xff0088);
+            this.material.emissive.setHex(0xff0088);
         }
     }
 

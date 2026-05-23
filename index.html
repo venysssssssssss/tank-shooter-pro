@@ -14,6 +14,18 @@
     <div id="ui">
         <div id="hud">
             <div class="hud-item">
+                <span class="label">HP</span>
+                <span id="hp" class="value neon-text-green">100/100</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">ABILITY</span>
+                <span id="ability-status" class="value neon-text-blue">READY</span>
+            </div>
+            <div class="hud-item" id="powerup-hud" style="display: none;">
+                <span class="label">POWERUP</span>
+                <span id="powerup-status" class="value neon-text-pink">-</span>
+            </div>
+            <div class="hud-item">
                 <span class="label">WAVE</span>
                 <span id="wave" class="value neon-text-blue">1</span>
             </div>
@@ -84,8 +96,17 @@
         <div id="game-over" class="overlay" style="display:none">
             <h2 class="neon-text-red">CONNECTION LOST</h2>
             <p>Score: <span id="final-score">0</span></p>
-            <button id="revive-btn" class="neon-btn">REVIVE (AD)</button>
+            <button id="revive-btn" class="neon-btn">REVIVE (200 C / 2 N)</button>
             <button id="restart-btn" class="neon-btn small">REBOOT</button>
+        </div>
+
+        <div id="victory-ui" class="overlay" style="display:none">
+            <h2 class="neon-text-green">SECTOR SECURED</h2>
+            <p>All UFOs Defeated!</p>
+            <p>Score: <span id="victory-score">0</span></p>
+            <p style="color: #ff00ff; font-weight: bold;">REWARD: +500 CREDITS | +10 NANOBYTES</p>
+            <button id="victory-replay-btn" class="neon-btn">REPLAY RUN</button>
+            <button id="victory-endless-btn" class="neon-btn small">CONTINUE ENDLESS</button>
         </div>
     </div>
     

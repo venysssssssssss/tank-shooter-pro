@@ -91,7 +91,7 @@ export class WaveManager {
         this.startWave();
     }
 
-    private startWave() {
+    public startWave() {
         this.enemiesSpawned = 0;
         this.enemiesKilled = 0;
         this.spawnTimer = 0;
@@ -102,8 +102,15 @@ export class WaveManager {
 
     private completeWave() {
         this.active = false;
-        eventBus.emit('STATE_CHANGE', { from: 'wave', to: 'wave_complete' }); // emit to bus
+        const finishedWave = this.getCurrentWave();
+        eventBus.emit('WAVE_COMPLETED', { wave: finishedWave.id });
+        
         this.currentWaveIndex++;
+        
+        // Pause wave progression on wave 5 to show the victory screen
+        if (finishedWave.id === 5) {
+            return;
+        }
         
         setTimeout(() => {
             this.startWave();

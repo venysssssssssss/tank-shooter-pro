@@ -6,7 +6,7 @@ export interface GameEvents {
     'UPGRADE_PURCHASED': { type: string; level: number };
     'DAILY_REWARD_CLAIMED': { credits: number };
     'ENEMY_KILLED': { type: string; score: number; credits: number };
-    'PLAYER_HIT': { shielded: boolean };
+    'PLAYER_HIT': { shielded: boolean; damage?: number; currentHP?: number };
     'GAME_OVER': { score: number };
     'STATE_CHANGE': { from: string; to: string };
     'SCORE_ADD': number;

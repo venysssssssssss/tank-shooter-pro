@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { eventBus } from './EventBus';
+import { ENEMY_BALANCE } from './config/balance';
 
 export enum UfoState {
     SPAWN,
@@ -112,74 +113,57 @@ export class Ufo {
 
         if (forceType === 'BOSS') {
             this.type = 'BOSS';
-            this.maxHp = 3000;
-            this.hp = 3000;
             this.mesh.scale.set(6.0, 6.0, 6.0);
             this.coreMat.color.setHex(0x00f2ff);
             this.coreMat.emissive.setHex(0x00f2ff);
             this.ringMat.color.setHex(0xff00ff);
             this.ringMat.emissive.setHex(0xff00ff);
-            this.speed = 12;
-            this.preferredDistance = 45;
         } else if (forceType === 'TANK') {
             this.type = 'TANK';
-            this.maxHp = 400;
-            this.hp = 400;
             this.mesh.scale.set(2.0, 2.0, 2.0);
             this.coreMat.color.setHex(0xff6600);
             this.coreMat.emissive.setHex(0xff6600);
             this.ringMat.color.setHex(0xff6600);
             this.ringMat.emissive.setHex(0xff6600);
-            this.speed = 18 + Math.random() * 8;
-            this.preferredDistance = 15;
         } else if (forceType === 'KAMIKAZE') {
             this.type = 'KAMIKAZE';
-            this.maxHp = 50;
-            this.hp = 50;
             this.mesh.scale.set(0.8, 0.8, 0.8);
             this.coreMat.color.setHex(0xff0000);
             this.coreMat.emissive.setHex(0xff0000);
             this.ringMat.color.setHex(0xff0000);
             this.ringMat.emissive.setHex(0xff0000);
-            this.speed = 70 + Math.random() * 20;
-            this.preferredDistance = 0;
         } else if (forceType === 'SNIPER') {
             this.type = 'SNIPER';
-            this.maxHp = 80;
-            this.hp = 80;
             this.mesh.scale.set(1.0, 0.6, 1.0); // Flat, aerodynamic look
             this.coreMat.color.setHex(0x8800ff); // Dark Purple core
             this.coreMat.emissive.setHex(0x8800ff);
             this.ringMat.color.setHex(0xff00ff); // Magenta outer ring
             this.ringMat.emissive.setHex(0xff00ff);
-            this.speed = 22 + Math.random() * 8;
-            this.preferredDistance = 35;
         } else if (forceType === 'SPAWNER') {
             this.type = 'SPAWNER';
-            this.maxHp = 200;
-            this.hp = 200;
             this.mesh.scale.set(1.8, 1.8, 1.8);
             this.coreMat.color.setHex(0x00ff88); // Neon Green core
             this.coreMat.emissive.setHex(0x00ff88);
             this.ringMat.color.setHex(0x00f2ff); // Cyan ring
             this.ringMat.emissive.setHex(0x00f2ff);
-            this.speed = 14 + Math.random() * 6;
-            this.preferredDistance = 40;
         } else {
             this.type = 'NORMAL';
-            this.maxHp = 100;
-            this.hp = 100;
             this.mesh.scale.set(1.2, 1.2, 1.2);
             this.coreMat.color.setHex(0xff00ff);
             this.coreMat.emissive.setHex(0xff00ff);
             this.ringMat.color.setHex(0x00f2ff);
             this.ringMat.emissive.setHex(0x00f2ff);
-            this.speed = 35 + Math.random() * 15;
-            this.preferredDistance = 25;
         }
 
+        // Apply config-based balance stats
+        const config = ENEMY_BALANCE[this.type] || ENEMY_BALANCE.NORMAL;
+        this.maxHp = config.maxHp;
+        this.hp = config.maxHp;
+        this.speed = config.baseSpeed + (config.speedVariance > 0 ? Math.random() * config.speedVariance : 0);
+        this.preferredDistance = config.preferredDistance;
+
         const angle = Math.random() * Math.PI * 2;
-        const radius = this.type === 'BOSS' ? 250 : 150 + Math.random() * 60;
+        const radius = this.type === 'BOSS' ? 110 : 70 + Math.random() * 15;
         this.mesh.position.set(
             Math.cos(angle) * radius,
             (this.type === 'BOSS' ? 25 : 8) + Math.random() * 10,

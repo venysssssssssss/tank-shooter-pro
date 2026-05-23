@@ -130,6 +130,20 @@ export class PlayerProfileStore {
         return false;
     }
 
+    addNanobytes(amount: number) {
+        this.data.nanobytes += amount;
+        this.save();
+    }
+
+    spendNanobytes(amount: number): boolean {
+        if (this.data.nanobytes >= amount) {
+            this.data.nanobytes -= amount;
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
     buyUpgrade(type: keyof PlayerUpgrades): boolean {
         const level = this.data.upgrades[type];
         if (level >= 5) return false; // max level
