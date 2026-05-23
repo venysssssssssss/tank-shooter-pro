@@ -1,77 +1,15 @@
 import * as THREE from 'three';
 
-class Particle {
-    scene: THREE.Scene;
+interface ParticleData {
     active: boolean;
     life: number;
     maxLife: number;
-    mesh: THREE.Mesh;
-    material: THREE.MeshStandardMaterial;
+    position: THREE.Vector3;
     velocity: THREE.Vector3;
-
-    constructor(scene: THREE.Scene) {
-        this.scene = scene;
-        this.active = false;
-        this.life = 0;
-        this.maxLife = 1;
-
-        const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-        this.material = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0xffffff,
-            emissiveIntensity: 2.0,
-            toneMapped: false
-        });
-
-        this.mesh = new THREE.Mesh(geometry, this.material);
-        this.mesh.visible = false;
-        this.velocity = new THREE.Vector3();
-        
-        this.scene.add(this.mesh);
-    }
-
-    reset(position: THREE.Vector3, color: number): void {
-        this.active = true;
-        this.mesh.visible = true;
-        this.mesh.position.copy(position);
-        this.life = 0;
-        this.maxLife = 0.5 + Math.random() * 0.5;
-        
-        this.material.color.setHex(color);
-        this.material.emissive.setHex(color);
-        this.material.emissiveIntensity = 2.0;
-
-        const angle = Math.random() * Math.PI * 2;
-        const elevation = (Math.random() - 0.2) * Math.PI;
-        this.velocity.set(
-            Math.cos(angle) * Math.cos(elevation),
-            Math.sin(elevation) + 1.0,
-            Math.sin(angle) * Math.cos(elevation)
-        ).normalize().multiplyScalar(10 + Math.random() * 20);
-    }
-
-    update(deltaTime: number): void {
-        if (!this.active) return;
-        
-        this.life += deltaTime;
-        if (this.life >= this.maxLife) {
-            this.active = false;
-            this.mesh.visible = false;
-            return;
-        }
-
-        const step = this.velocity.clone().multiplyScalar(deltaTime);
-        this.mesh.position.add(step);
-        
-        this.velocity.y -= 30 * deltaTime; // gravity
-        
-        this.mesh.rotation.x += deltaTime * 5;
-        this.mesh.rotation.y += deltaTime * 5;
-        
-        const progress = this.life / this.maxLife;
-        this.material.emissiveIntensity = 2.0 * (1 - progress);
-        this.mesh.scale.setScalar(1 - progress);
-    }
+    rotation: THREE.Vector3;
+    rotSpeed: THREE.Vector3;
+    color: THREE.Color;
+    baseScale: number;
 }
 
 class ScorchMark {
@@ -128,31 +66,101 @@ class ScorchMark {
 }
 
 export class ParticleSystem {
-    particles: Particle[];
-    scorches: ScorchMark[];
+    scene: THREE.Scene;
+    
+    // Instanced Mesh variables
+    maxParticles = 600;
+    instancedMesh: THREE.InstancedMesh;
+    particleData: ParticleData[] = [];
+    
+    // Scorch marks
+    scorches: ScorchMark[] = [];
+    
+    // Reusable matrices/vectors for frame update to prevent GC
+    private _dummyMatrix = new THREE.Matrix4();
+    private _dummyPosition = new THREE.Vector3();
+    private _dummyRotation = new THREE.Euler();
+    private _dummyScale = new THREE.Vector3();
+    private _dummyColor = new THREE.Color();
+    private _stepVec = new THREE.Vector3();
 
     constructor(scene: THREE.Scene) {
-        this.particles = [];
-        for (let i = 0; i < 200; i++) {
-            this.particles.push(new Particle(scene));
+        this.scene = scene;
+        
+        // 1. Initialize instanced mesh for box particles (single draw call)
+        const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        const material = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0.9,
+            toneMapped: false
+        });
+        
+        this.instancedMesh = new THREE.InstancedMesh(geometry, material, this.maxParticles);
+        this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        if (this.instancedMesh.instanceColor) {
+            this.instancedMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+        }
+        this.scene.add(this.instancedMesh);
+
+        // 2. Initialize particle pool states
+        for (let i = 0; i < this.maxParticles; i++) {
+            this.particleData.push({
+                active: false,
+                life: 0,
+                maxLife: 1,
+                position: new THREE.Vector3(),
+                velocity: new THREE.Vector3(),
+                rotation: new THREE.Vector3(),
+                rotSpeed: new THREE.Vector3(),
+                color: new THREE.Color(0xffffff),
+                baseScale: 1.0
+            });
+            
+            // Set initial invisible matrix (scale = 0)
+            this._dummyMatrix.makeScale(0, 0, 0);
+            this.instancedMesh.setMatrixAt(i, this._dummyMatrix);
         }
         
-        this.scorches = [];
-        for (let i = 0; i < 20; i++) {
+        // 3. Scorch Marks
+        for (let i = 0; i < 25; i++) {
             this.scorches.push(new ScorchMark(scene));
         }
     }
 
-    explode(position: THREE.Vector3, color: number = 0x00f2ff): void {
-        let count = 0;
-        for (const p of this.particles) {
+    explode(position: THREE.Vector3, colorHex: number = 0x00f2ff, amount: number = 20): void {
+        let spawned = 0;
+        
+        for (let i = 0; i < this.maxParticles; i++) {
+            const p = this.particleData[i];
             if (!p.active) {
-                p.reset(position, color);
-                count++;
-                if (count >= 25) break;
+                p.active = true;
+                p.life = 0;
+                p.maxLife = 0.4 + Math.random() * 0.5;
+                p.position.copy(position);
+                p.color.setHex(colorHex);
+                p.baseScale = 0.6 + Math.random() * 0.8;
+
+                const angle = Math.random() * Math.PI * 2;
+                const elevation = (Math.random() - 0.2) * Math.PI;
+                p.velocity.set(
+                    Math.cos(angle) * Math.cos(elevation),
+                    Math.sin(elevation) + 1.2,
+                    Math.sin(angle) * Math.cos(elevation)
+                ).normalize().multiplyScalar(12 + Math.random() * 18);
+
+                p.rotation.set(Math.random() * 5, Math.random() * 5, Math.random() * 5);
+                p.rotSpeed.set(
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10
+                );
+
+                spawned++;
+                if (spawned >= amount) break;
             }
         }
         
+        // Spawn 1 scorch mark at position
         for (const s of this.scorches) {
             if (!s.active) {
                 s.spawn(position);
@@ -162,11 +170,65 @@ export class ParticleSystem {
     }
 
     update(deltaTime: number): void {
-        for (const p of this.particles) {
-            p.update(deltaTime);
+        let needsMatrixUpdate = false;
+        let needsColorUpdate = false;
+
+        for (let i = 0; i < this.maxParticles; i++) {
+            const p = this.particleData[i];
+            
+            if (p.active) {
+                p.life += deltaTime;
+                if (p.life >= p.maxLife) {
+                    p.active = false;
+                    
+                    // Collapse scale to 0 (make invisible)
+                    this._dummyMatrix.makeScale(0, 0, 0);
+                    this.instancedMesh.setMatrixAt(i, this._dummyMatrix);
+                    needsMatrixUpdate = true;
+                    continue;
+                }
+
+                // Physics update
+                this._stepVec.copy(p.velocity).multiplyScalar(deltaTime);
+                p.position.add(this._stepVec);
+                p.velocity.y -= 28 * deltaTime; // gravity pull
+
+                // Rotation update
+                p.rotation.addScaledVector(p.rotSpeed, deltaTime);
+
+                // Calculate progress scaling
+                const progress = p.life / p.maxLife;
+                const scaleVal = p.baseScale * (1.0 - progress);
+
+                // Set dummy matrix
+                this._dummyPosition.copy(p.position);
+                this._dummyRotation.set(p.rotation.x, p.rotation.y, p.rotation.z);
+                this._dummyScale.set(scaleVal, scaleVal, scaleVal);
+                
+                this._dummyMatrix.compose(this._dummyPosition, new THREE.Quaternion().setFromEuler(this._dummyRotation), this._dummyScale);
+                this.instancedMesh.setMatrixAt(i, this._dummyMatrix);
+                needsMatrixUpdate = true;
+
+                // Set color decay
+                if (this.instancedMesh.instanceColor) {
+                    this._dummyColor.copy(p.color).multiplyScalar(1.0 - progress);
+                    this.instancedMesh.setColorAt(i, this._dummyColor);
+                    needsColorUpdate = true;
+                }
+            }
         }
-        for (const s of this.scorches) {
-            s.update(deltaTime);
+
+        // Notify WebGL about instanced attribute changes
+        if (needsMatrixUpdate) {
+            this.instancedMesh.instanceMatrix.needsUpdate = true;
+        }
+        if (needsColorUpdate && this.instancedMesh.instanceColor) {
+            this.instancedMesh.instanceColor.needsUpdate = true;
+        }
+
+        // Update scorch marks
+        for (let i = 0; i < this.scorches.length; i++) {
+            this.scorches[i].update(deltaTime);
         }
     }
 }

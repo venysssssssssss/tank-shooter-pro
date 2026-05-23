@@ -9,12 +9,16 @@ export interface PlayerUpgrades {
 
 export interface PlayerData {
     credits: number; // Soft currency
-    premium: number; // Hard currency
-    nanobytes: number;
+    premium: number; // Hard currency (Premium)
+    nanobytes: number; // Nanobytes currency
     xp: number;
     level: number;
     highScore: number;
     upgrades: PlayerUpgrades;
+    inventory: string[]; // Purchased items
+    claimedRewards: string[]; // Claimed BattlePass reward IDs (e.g., "BP_1_FREE", "BP_5_PREM")
+    battlePassXp: number;
+    isPremiumPassActive: boolean;
 }
 
 export class PlayerProfileStore {
@@ -27,16 +31,27 @@ export class PlayerProfileStore {
 
     private load(): PlayerData {
         const raw = localStorage.getItem(PlayerProfileStore.STORAGE_KEY);
+        const defaultData = this.getDefaultData();
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                // ensure all fields exist (migration)
-                return { ...this.getDefaultData(), ...parsed };
+                // Deep merge upgrades to protect against partial old data
+                const upgrades = { ...defaultData.upgrades, ...(parsed.upgrades || {}) };
+                const inventory = Array.isArray(parsed.inventory) ? parsed.inventory : defaultData.inventory;
+                const claimedRewards = Array.isArray(parsed.claimedRewards) ? parsed.claimedRewards : defaultData.claimedRewards;
+                
+                return {
+                    ...defaultData,
+                    ...parsed,
+                    upgrades,
+                    inventory,
+                    claimedRewards
+                };
             } catch (e) {
                 console.error("Save data corrupted", e);
             }
         }
-        return this.getDefaultData();
+        return defaultData;
     }
 
     private getDefaultData(): PlayerData {
@@ -52,7 +67,11 @@ export class PlayerProfileStore {
                 damage: 0,
                 fireRate: 0,
                 speed: 0
-            }
+            },
+            inventory: [],
+            claimedRewards: [],
+            battlePassXp: 0,
+            isPremiumPassActive: false
         };
     }
 
@@ -67,16 +86,19 @@ export class PlayerProfileStore {
     addXP(amount: number) {
         this.data.xp += amount;
         
-        // Loop while XP is greater than or equal to what's needed for the next level.
-        // For testing we use 100 * level.
         let xpNeeded = this.data.level * 100;
         
         while (this.data.xp >= xpNeeded) {
             this.data.xp -= xpNeeded;
             this.data.level++;
             xpNeeded = this.data.level * 100;
+            // Statically typed event bus emitter
             eventBus.emit('PLAYER_LEVELED_UP', { level: this.data.level });
         }
+        
+        // Parallel BattlePass XP progress (BP gains 50% of earned XP)
+        this.addBattlePassXp(Math.floor(amount * 0.5));
+        
         this.save();
     }
 
@@ -120,6 +142,35 @@ export class PlayerProfileStore {
             return true;
         }
         return false;
+    }
+
+    // --- Inventory & Shop logic ---
+    addItemToInventory(itemId: string): void {
+        if (!this.data.inventory.includes(itemId)) {
+            this.data.inventory.push(itemId);
+            this.save();
+        }
+    }
+
+    hasItem(itemId: string): boolean {
+        return this.data.inventory.includes(itemId);
+    }
+
+    // --- BattlePass logic ---
+    addBattlePassXp(amount: number): void {
+        this.data.battlePassXp += amount;
+        this.save();
+    }
+
+    claimReward(rewardKey: string): void {
+        if (!this.data.claimedRewards.includes(rewardKey)) {
+            this.data.claimedRewards.push(rewardKey);
+            this.save();
+        }
+    }
+
+    isRewardClaimed(rewardKey: string): boolean {
+        return this.data.claimedRewards.includes(rewardKey);
     }
 }
 export const playerProfile = new PlayerProfileStore();

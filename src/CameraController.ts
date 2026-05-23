@@ -2,8 +2,10 @@ import * as THREE from 'three';
 
 export class CameraController {
     camera: THREE.PerspectiveCamera;
-    target: any; // Using any to avoid circular dependencies for now or we can import Tank
-    cameraOffset: THREE.Vector3;
+    target: any; // Using any to avoid circular dependencies
+    distance: number;
+    cameraYaw: number;
+    cameraPitch: number;
     lookTarget: THREE.Vector3;
     trauma: number;
     shakeIntensity: number;
@@ -12,7 +14,9 @@ export class CameraController {
     constructor(camera: THREE.PerspectiveCamera, target: any) {
         this.camera = camera;
         this.target = target;
-        this.cameraOffset = new THREE.Vector3(0, 45, 30);
+        this.distance = 17; // Follow distance
+        this.cameraYaw = 0;
+        this.cameraPitch = 0.25; // Look slightly down initially
         this.lookTarget = new THREE.Vector3();
         
         // Screenshake
@@ -26,16 +30,44 @@ export class CameraController {
     }
 
     update(deltaTime: number, combo: number = 0): void {
-        const lerpFactor = 1 - Math.exp(-10 * deltaTime);
+        const lerpFactor = 1 - Math.exp(-12 * deltaTime);
         
-        const offset = this.cameraOffset.clone();
-        offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.target.cameraPitch);
-        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.target.mesh.rotation.y);
+        // 1. Orbit controls: Rotate camera offset around the tank based on mouse delta
+        if (this.target.inputManager.keys.isLocked) {
+            this.cameraYaw -= this.target.inputManager.keys.movementX * 0.0025;
+            this.cameraPitch -= this.target.inputManager.keys.movementY * 0.0025;
+            
+            // Reset mouse inputs
+            this.target.inputManager.keys.movementX = 0;
+            this.target.inputManager.keys.movementY = 0;
+        } else {
+            // Unlocked: keep camera aligned behind tank
+            let diff = this.target.mesh.rotation.y - this.cameraYaw;
+            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            this.cameraYaw += diff * lerpFactor;
+        }
+
+        // Cap camera pitch to prevent flipping upside down
+        this.cameraPitch = Math.max(-0.2, Math.min(0.75, this.cameraPitch));
+
+        // 2. Position camera based on yaw, pitch, and tank position
+        const offset = new THREE.Vector3(0, 4.5, this.distance);
+        offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.cameraPitch);
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraYaw);
         
         const targetPos = this.target.mesh.position.clone().add(offset);
         this.camera.position.lerp(targetPos, lerpFactor);
         
-        this.lookTarget.lerp(this.target.mesh.position, lerpFactor);
+        // 3. Look target (tank center + forward camera look-ahead vector)
+        const cameraDir = new THREE.Vector3(0, 0, -1)
+            .applyAxisAngle(new THREE.Vector3(1, 0, 0), this.cameraPitch)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraYaw);
+            
+        const targetLookPos = this.target.mesh.position.clone()
+            .add(new THREE.Vector3(0, 1.8, 0))
+            .addScaledVector(cameraDir, 8.0); // look 8 units ahead of the tank in camera direction
+        
+        this.lookTarget.lerp(targetLookPos, lerpFactor);
         this.camera.lookAt(this.lookTarget);
 
         // FOV effect based on combo

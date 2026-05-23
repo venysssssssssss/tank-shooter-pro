@@ -35,15 +35,25 @@ export class ItemShop {
     }
 
     buyItem(itemId: string): boolean {
+        // If already owned, prevent duplicate purchases
+        if (this.profileStore.hasItem(itemId)) return false;
+
         const available = this.getAvailableItems();
         const item = available.find(i => i.id === itemId);
 
         if (!item) return false; // Item not available today
 
+        let success = false;
         if (item.currency === 'credits') {
-            return this.profileStore.spendCredits(item.price);
+            success = this.profileStore.spendCredits(item.price);
         } else if (item.currency === 'premium') {
-            return this.profileStore.spendPremium(item.price);
+            success = this.profileStore.spendPremium(item.price);
+        }
+
+        if (success) {
+            // Deliver item to player inventory
+            this.profileStore.addItemToInventory(itemId);
+            return true;
         }
 
         return false;
