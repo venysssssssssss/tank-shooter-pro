@@ -3,16 +3,7 @@ const urlsToCache = [
   './',
   './index.html',
   './style.css',
-  './src/main.js',
-  './src/Tank.js',
-  './src/Ufo.js',
-  './src/Bullet.js',
-  './src/PowerUp.js',
-  './src/ParticleSystem.js',
-  './src/AudioManager.js',
-  './src/CameraController.js',
-  './src/InputManager.js',
-  './src/ObjectPool.js'
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {

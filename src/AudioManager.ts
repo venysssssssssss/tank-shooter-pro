@@ -1,6 +1,14 @@
 export class AudioManager {
+    ctx: AudioContext;
+    masterGain: GainNode;
+    musicPlaying: boolean;
+    tempo: number;
+    nextNoteTime: number;
+    current16thNote: number;
+    combo: number;
+
     constructor() {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
         this.masterGain.connect(this.ctx.destination);
         this.masterGain.gain.value = 0.3;
@@ -12,11 +20,11 @@ export class AudioManager {
         this.combo = 0;
     }
 
-    setCombo(combo) {
+    setCombo(combo: number): void {
         this.combo = combo;
     }
 
-    startMusic() {
+    startMusic(): void {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         if (this.musicPlaying) return;
         this.musicPlaying = true;
@@ -24,11 +32,11 @@ export class AudioManager {
         this.scheduler();
     }
 
-    stopMusic() {
+    stopMusic(): void {
         this.musicPlaying = false;
     }
 
-    scheduler() {
+    scheduler(): void {
         if (!this.musicPlaying) return;
         
         while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
@@ -39,7 +47,7 @@ export class AudioManager {
         setTimeout(() => this.scheduler(), 25);
     }
 
-    nextNote() {
+    nextNote(): void {
         const secondsPerBeat = 60.0 / this.tempo;
         this.nextNoteTime += 0.25 * secondsPerBeat;
         this.current16thNote++;
@@ -48,7 +56,7 @@ export class AudioManager {
         }
     }
 
-    scheduleNote(beatNumber, time) {
+    scheduleNote(beatNumber: number, time: number): void {
         // Kick Drum (Always on)
         if (beatNumber % 4 === 0) {
             const osc = this.ctx.createOscillator();
@@ -106,7 +114,7 @@ export class AudioManager {
         }
     }
 
-    playLaser() {
+    playLaser(): void {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -125,7 +133,7 @@ export class AudioManager {
         osc.stop(this.ctx.currentTime + 0.1);
     }
 
-    playExplosion() {
+    playExplosion(): void {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const noise = this.ctx.createBufferSource();
         const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
@@ -153,7 +161,7 @@ export class AudioManager {
         noise.start();
     }
 
-    playClick() {
+    playClick(): void {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();

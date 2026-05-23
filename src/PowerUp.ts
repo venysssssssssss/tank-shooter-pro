@@ -1,27 +1,34 @@
 import * as THREE from 'three';
 
 export class PowerUp {
-    constructor(scene) {
+    scene: THREE.Scene;
+    active: boolean;
+    type: string | null;
+    material: THREE.MeshStandardMaterial;
+    mesh: THREE.Mesh;
+    boundingBox: THREE.Box3;
+
+    constructor(scene: THREE.Scene) {
         this.scene = scene;
         this.active = false;
-        this.type = 'TRIPLE'; // Only one for now: TRIPLE SHOT
+        this.type = null;
 
         const geometry = new THREE.OctahedronGeometry(1.5, 0);
-        this.material = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
-            emissive: 0x00ff00,
-            emissiveIntensity: 2.0,
+        this.material = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            emissive: 0xffffff,
+            emissiveIntensity: 1.0,
             toneMapped: false
         });
         
         this.mesh = new THREE.Mesh(geometry, this.material);
         this.mesh.visible = false;
         this.boundingBox = new THREE.Box3();
-        
+
         this.scene.add(this.mesh);
     }
 
-    spawn(position, type) {
+    spawn(position: THREE.Vector3, type: string): void {
         this.active = true;
         this.type = type;
         this.mesh.visible = true;
@@ -40,15 +47,15 @@ export class PowerUp {
         }
     }
 
-    update(deltaTime) {
+    update(deltaTime: number): void {
         if (!this.active) return;
-        this.mesh.rotation.y += 3 * deltaTime;
-        this.mesh.rotation.x += 1 * deltaTime;
-        this.mesh.position.y = 2 + Math.sin(Date.now() * 0.005) * 0.5;
+        this.mesh.rotation.y += deltaTime * 2;
+        this.mesh.rotation.x += deltaTime;
+        this.mesh.position.y = Math.sin(Date.now() * 0.003) * 0.5 + 1.5;
         this.boundingBox.setFromObject(this.mesh);
     }
 
-    collect() {
+    collect(): string | null {
         this.active = false;
         this.mesh.visible = false;
         return this.type;

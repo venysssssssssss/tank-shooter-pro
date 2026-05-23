@@ -146,6 +146,12 @@ h1, h2 {
     font-size: 0.8rem;
 }
 
+.neon-btn.active {
+    background: currentColor;
+    color: #000 !important;
+    box-shadow: 0 0 20px currentColor;
+}
+
 /* Crosshair */
 #crosshair {
     position: absolute;

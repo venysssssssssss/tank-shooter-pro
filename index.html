@@ -10,8 +10,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <canvas id="game-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; outline: none;"></canvas>
     <div id="ui">
         <div id="hud">
+            <div class="hud-item">
+                <span class="label">WAVE</span>
+                <span id="wave" class="value neon-text-blue">1</span>
+            </div>
             <div class="hud-item">
                 <span class="label">SCORE</span>
                 <span id="score" class="value neon-text-blue">0</span>
@@ -37,10 +42,34 @@
 
         <div id="menu" class="overlay">
             <h1 class="neon-text-blue">NEON PROTOCOL</h1>
+            <div id="upgrades-panel" style="margin-bottom: 15px; text-align: left; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; border-radius: 5px;">
+                <h3 style="color: #00f2ff; margin-top: 0; text-align: center; letter-spacing: 2px;">UPGRADES</h3>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                    <span style="color:#fff;">Fire Rate (<span id="upg-fire-lvl">0</span>/5)</span>
+                    <button id="btn-upg-fire" class="neon-btn small" style="padding: 4px 10px; font-size: 12px; margin: 0;">BUY (100 C)</button>
+                </div>
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#fff;">Speed (<span id="upg-speed-lvl">0</span>/5)</span>
+                    <button id="btn-upg-speed" class="neon-btn small" style="padding: 4px 10px; font-size: 12px; margin: 0;">BUY (100 C)</button>
+                </div>
+            </div>
+            <div id="class-selection" style="margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; border-radius: 5px;">
+                <h3 style="color: #00f2ff; margin-top: 0; text-align: center; letter-spacing: 2px;">SELECT CLASS</h3>
+                <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button id="btn-class-light" class="neon-btn small" style="border-color: #ff00ff; color: #ff00ff; margin: 0;">LIGHT</button>
+                    <button id="btn-class-medium" class="neon-btn small active" style="border-color: #00f2ff; color: #00f2ff; margin: 0;">MEDIUM</button>
+                    <button id="btn-class-heavy" class="neon-btn small" style="border-color: #ff8800; color: #ff8800; margin: 0;">HEAVY</button>
+                </div>
+                <div id="class-desc" style="color: #aaa; font-size: 0.85rem; margin-top: 10px; height: 35px; line-height: 1.2;">
+                    Medium chassis. Standard attributes. Energy Shield ability (blocks damage).
+                </div>
+            </div>
+            <button id="daily-reward-btn" class="neon-btn" style="background: rgba(0, 255, 0, 0.1); border-color: #00ff00; color: #00ff00; margin-bottom: 15px; font-size: 16px;">CLAIM DAILY REWARD (+500 C)</button><br>
             <button id="start-btn" class="neon-btn">INITIALIZE</button>
             <div class="controls">
                 WASD to Move<br>
-                Mouse to Aim & Shoot
+                Mouse Cursor to Aim & Shoot<br>
+                Q or Shift to Activate Ability
             </div>
         </div>
 
@@ -60,22 +89,13 @@
         </div>
     </div>
     
-    <!-- Import map for Three.js -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+    <script type="module" src="/src/main.ts"></script>
     <script>
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && !window.location.host.includes('localhost') && !window.location.host.includes('127.0.0.1')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
             });
         }
     </script>
-    <script type="module" src="src/main.js"></script>
 </body>
 </html>

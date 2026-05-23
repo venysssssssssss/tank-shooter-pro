@@ -1,0 +1,33 @@
+{
+  "name": "tank-shooter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "bugs": {
+    "url": "https://github.com/venysssssssssss/tank-shooter-pro/issues"
+  },
+  "homepage": "https://github.com/venysssssssssss/tank-shooter-pro#readme",
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "@types/three": "^0.184.1",
+    "jsdom": "^29.1.1",
+    "socket.io-client": "^4.8.3",
+    "tsx": "^4.22.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.3",
+    "three": "^0.184.0"
+  }
+}
